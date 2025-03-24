@@ -5,9 +5,8 @@ from time import sleep
 # ========== Configuration ==========
 ASU_ID = '1232089042'
 MAX_INSTANCES = 15  # Maximum number of worker instances
-AMI_ID = 'ami-0b6fbc8df0a65b120'  # Amazon Machine Image ID
+AMI_ID = 'ami-0f738cfef11d583e8'  # Amazon Machine Image ID
 KEY_NAME = 'web-instance'  # Your EC2 key pair name
-
 # SQS Queues
 REQUEST_QUEUE = 'https://sqs.us-east-1.amazonaws.com/390844739554/1232089042-req-queue'
 RESPONSE_QUEUE = 'https://sqs.us-east-1.amazonaws.com/390844739554/1232089042-resp-queue'
