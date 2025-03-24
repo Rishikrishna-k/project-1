@@ -20,7 +20,7 @@ def download_image_from_s3(filename: str) -> str:
     """Downloads an image from S3 to local storage."""
     try:
         print(f"[DEBUG] Downloading {filename} from S3...")
-        local_path = f"/tmp/{filename}"  # Save in /tmp (recommended for AWS Lambda)
+        local_path = f"{filename}"  # Save in /tmp (recommended for AWS Lambda)
         s3.download_file(S3_INPUT_BUCKET, filename, local_path)
         return local_path
     except Exception as e:
@@ -85,7 +85,7 @@ def process_tasks_forever():
             # 1. Get next task
             task = fetch_next_task()
             if not task:
-                time.sleep(5)  # Wait before checking again
+                time.sleep(1)  # Wait before checking again
                 continue
 
             filename = task['filename']

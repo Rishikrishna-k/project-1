@@ -1,13 +1,9 @@
-
-from http.client import HTTPException
+from fastapi import FastAPI, UploadFile, File
+from starlette.responses import PlainTextResponse, JSONResponse
 import boto3
 import os
 import asyncio
 import threading
-from fastapi import FastAPI, UploadFile, File
-from starlette.responses import PlainTextResponse
-from starlette.middleware.trustedhost import TrustedHostMiddleware
-
 
 # ---------- Configuration ----------
 ASU_ID = "1232089042"
@@ -38,7 +34,8 @@ def upload_to_s3(file_content: bytes, filename: str):
         print(f"[DEBUG] Uploaded {filename} to S3 bucket {S3_BUCKET_NAME}")
     except Exception as e:
         print(f"[ERROR] Failed to upload to S3: {e}")
-        raise HTTPException(status_code=500, detail="S3 upload failed")
+        return False
+    return True
 
 def send_to_request_queue(filename: str):
     """Sends a filename to the SQS request queue"""
@@ -47,7 +44,8 @@ def send_to_request_queue(filename: str):
         print(f"[DEBUG] Sent {filename} to request queue")
     except Exception as e:
         print(f"[ERROR] Failed to send to SQS: {e}")
-        raise HTTPException(status_code=500, detail="SQS send failed")
+        return False
+    return True
 
 def fetch_results_from_queue():
     """Continuously checks the response queue for results (runs in background)"""
@@ -87,37 +85,39 @@ def fetch_results_from_queue():
 
 # ========== API Endpoint ==========
 @app.post("/", response_class=PlainTextResponse)
-async def predict_image(file: UploadFile = File(...)):
+async def predict_image(inputFile: UploadFile = File(...)):
     """
     Uploads an image, sends it for processing, and waits for the result.
     Returns format: "filename:classification"
     """
     try:
         # 1. Read uploaded file
-        file_content = await file.read()
-        filename = file.filename
+        file_content = await inputFile.read()
+        filename = inputFile.filename
         print(f"[DEBUG] Received file: {filename}")
 
         # 2. Upload to S3
-        upload_to_s3(file_content, filename)
+        if not upload_to_s3(file_content, filename):
+            return JSONResponse(status_code=500, content={"detail": "S3 upload failed"})
 
         # 3. Send filename to request queue
-        send_to_request_queue(filename)
+        if not send_to_request_queue(filename):
+            return JSONResponse(status_code=500, content={"detail": "SQS send failed"})
 
         # 4. Wait for result (max 30 seconds)
         wait_event = asyncio.Event()
         WAIT_EVENTS[filename] = wait_event
 
-        try:
-            await asyncio.wait_for(wait_event.wait(), timeout=30.0)
-            result = RESULTS.pop(filename)
-            return result
-        except asyncio.TimeoutError:
-            raise HTTPException(status_code=408, detail="Processing timeout")
+    
+        await wait_event.wait()
+        result = RESULTS.pop(filename)
+        file_name, prediction = result.split(':')
+        return f"{file_name}:{prediction}"
+    
 
     except Exception as e:
         print(f"[ERROR] Prediction failed: {e}")
-        raise HTTPException(status_code=500, detail="Internal server error")
+        return JSONResponse(status_code=500, content={"detail": "Internal server error"})
 
     finally:
         # Cleanup

@@ -55,7 +55,7 @@ def launch_instance(instance_number):
         
         # User data script that runs when instance starts
         user_data_script = """#!/bin/bash
-            sudo -u ec2-user nohup /usr/bin/python3 /home/ec2-user/app-tier/backend.py > /home/ec2-user/app-tier/backend.log 2>&1 &
+            sudo -u ec2-user nohup /usr/bin/python3 /home/ec2-user/project-1/backend.py > /home/ec2-user/project-1/backend.log 2>&1 &
             """
         
         instance = ec2.create_instances(
