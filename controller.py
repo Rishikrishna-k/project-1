@@ -66,7 +66,7 @@ def launch_instance(instance_number):
             TagSpecifications=[{
                 'ResourceType': 'instance',
                 'Tags': [
-                    {'Key': 'Name', 'Value': f'app-worker-{instance_number}'},
+                    {'Key': 'Name', 'Value': f'app-tier-instance-{instance_number}'},
                     {'Key': 'AppTier', 'Value': 'true'}
                 ]
             }],
